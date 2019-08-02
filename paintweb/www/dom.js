@@ -56,6 +56,101 @@ function deleteItem(array, item) {
   }
 }
 
+// ------------------------------------
+
+function _getNextID(key) {
+  let dgBase = localStorage.getItem(key)
+  if (dgBase == null) {
+    dgBase = 10000
+  } else {
+    dgBase = parseInt(dgBase)
+  }
+  dgBase++
+  return dgBase.toString()
+}
+
+function _makeLocalDrawingID() {
+  let val = _getNextID("dgBase")
+  localStorage_setItem("dgBase", val)
+  return val
+}
+
+function localStorage_setItem(key, val) {
+  try {
+    localStorage.setItem(key, val)
+  } catch (e) {
+    if (e.name == "QuotaExceededError") {
+      removeSomeCache()
+      localStorage.setItem(key, val)
+    }
+  }
+}
+
+function removeSomeCache() {
+  let clearID = _getNextID("dgClear")
+  for (let i = 0; i < 32; i++) {
+    let key = "dg:" + clearID
+    let doc = localStorage.getItem(key)
+    if (doc != null) {
+      let o = JSON.parse(doc)
+      for (let i in o.shapes) {
+        localStorage.removeItem(o.id + ":" + o.shapes[i])
+      }
+      localStorage.removeItem(key)
+      localStorage.setItem("dgClear", clearID)
+      return
+    }
+    clearID++
+  }
+}
+
+function loadDrawing(localID) {
+  let val = localStorage.getItem("dg:" + localID)
+  return JSON.parse(val)
+}
+
+function documentChanged(doc) {
+  if (doc.localID != "") {
+    let val = doc._stringify()
+    localStorage_setItem("dg:" + doc.localID, val)
+  }
+}
+
+function loadShape(parent, id) {
+  let val = localStorage.getItem(parent.localID + ":" + id)
+  let o = JSON.parse(val)
+  if (o == null) {
+    return null
+  }
+  let sty = o.style
+  let style = new QShapeStyle(sty.lineWidth, sty.lineColor, sty.fillColor)
+  switch (o.type) {
+    case "QLine":
+      return new QLine(o.pt1, o.pt2, style)
+    case "QRect":
+      return new QRect(o, style)
+    case "QEllipse":
+      return new QEllipse(o.x, o.y, o.radiusX, o.radiusY, style)
+    case "QPath":
+      return new QPath(o.points, o.close, style)
+    default:
+      alert("loadShape: unknown shape type - " + o.type)
+      return null
+  }
+}
+
+function shapeChanged(shape) {
+  if (shape.id != "") {
+    let parent = shape.type
+    shape.type = shape.constructor.name
+    let val = JSON.stringify(shape)
+    shape.type = parent
+    localStorage_setItem(parent.localID + ":" + shape.id, val)
+  }
+}
+
+// ----------------------------------
+
 class QShapeStyle {
   constructor(lineWidth, lineColor, fillColor) {
     this.lineWidth = lineWidth
@@ -76,6 +171,7 @@ class QLine {
     this.pt1 = point1
     this.pt2 = point2
     this.style = style
+    this.id = ""
   }
 
   bound() {
@@ -94,10 +190,12 @@ class QLine {
     this.pt1.y += dy
     this.pt2.x += dx
     this.pt2.y += dy
+    shapeChanged(this)
   }
 
   setProp(key, val) {
     this.style.setProp(key, val)
+    shapeChanged(this)
   }
 
   onpaint(ctx) {
@@ -118,6 +216,7 @@ class QRect {
     this.width = r.width
     this.height = r.height
     this.style = style
+    this.id = ""
   }
 
   bound() {
@@ -145,10 +244,12 @@ class QRect {
   move(dx, dy) {
     this.x += dx
     this.y += dy
+    shapeChanged(this)
   }
 
   setProp(key, val) {
     this.style.setProp(key, val)
+    shapeChanged(this)
   }
 
   onpaint(ctx) {
@@ -169,6 +270,7 @@ class QEllipse {
     this.radiusX = radiusX
     this.radiusY = radiusY
     this.style = style
+    this.id = ""
   }
 
   bound() {
@@ -200,10 +302,12 @@ class QEllipse {
   move(dx, dy) {
     this.x += dx
     this.y += dy
+    shapeChanged(this)
   }
 
   setProp(key, val) {
     this.style.setProp(key, val)
+    shapeChanged(this)
   }
 
   onpaint(ctx) {
@@ -222,6 +326,7 @@ class QPath {
     this.points = points
     this.clone = close
     this.style = style
+    this.id = ""
   }
 
   bound() {
@@ -278,10 +383,12 @@ class QPath {
       points[i].x += dx
       points[i].y += dy
     }
+    shapeChanged(this)
   }
 
   setProp(key, val) {
     this.style.setProp(key, val)
+    shapeChanged(this)
   }
 
   onpaint(ctx) {
@@ -307,21 +414,98 @@ class QPath {
 
 class QPaintDoc {
   constructor() {
-    this.shapes = []
+    this._reset()
+  }
+
+  _reset() {
+    this._shapes = []
+    this._idShapeBase = 0
+    this.localID = ""
+    this.displayID = ""
+  }
+
+  _load(localID) {
+    this.localID = localID
+    let o = loadDrawing(this.localID)
+    if (o == null) {
+      return
+    }
+    let shapes = []
+    for (let i in o.shapes) {
+      let shapeID = o.shapes[i]
+      let shape = loadShape(this, shapeID)
+      if (shape == null) {
+        continue
+      }
+      shape.id = shapeID
+      shape.type = this
+      shapes.push(shape)
+    }
+    this._shapes = shapes
+    this._idShapeBase = o.shapeBase
+  }
+
+  _stringify() {
+    let shapeIDs = []
+    let shapes = this._shapes
+    for (let i in shapes) {
+      shapeIDs.push(shapes[i].id)
+    }
+    return JSON.stringify({
+      id: this.localID,
+      shapeBase: this._idShapeBase,
+      shapes: shapeIDs
+    })
+  }
+
+  _initShape(shape) {
+    if (shape.id != "") {
+      alert("Can't init shape twich! shape.id = " + shape.id)
+      return shape
+    }
+    this._idShapeBase++
+    shape.id = this._idShapeBase.toString()
+    shape.type = this
+    return shape
+  }
+
+  init() {
+    if (this.displayID != "") {
+      alert("Can't init drawing twice! doc.id = " + this.displayID)
+      return
+    }
+    let hash = window.location.hash
+    if (hash != "") {
+      this.displayID = hash.substring(1)
+      this.localID = this.displayID.substring(1)
+      this._load(this.localID)
+      return
+    }
+    this.localID = _makeLocalDrawingID()
+    this.displayID = "t" + this.localID
+    window.location.hash = "#" + this.displayID
+  }
+
+  reload() {
+    this._reset()
+    this.init()
   }
 
   addShape(shape) {
     if (shape != null) {
-      this.shapes.push(shape)
+      this._shapes.push(this._initShape(shape))
+      shapeChanged(shape)
+      documentChanged(this)
     }
   }
 
   deleteShape(shape) {
-    deleteItem(this.shapes, shape)
+    deleteItem(this._shapes, shape)
+    documentChanged(this)
   }
 
   hitTest(pt) {
-    let shapes = this.shapes
+    let shapes = this._shapes
     let n = shapes.length
     for (let i = n - 1; i >= 0; i--) {
       let ret = shapes[i].hitTest(pt)
@@ -333,7 +517,7 @@ class QPaintDoc {
   }
 
   onpaint(ctx) {
-    let shapes = this.shapes
+    let shapes = this._shapes
     for (let i in shapes) {
       shapes[i].onpaint(ctx)
     }
