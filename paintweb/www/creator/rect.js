@@ -1,3 +1,19 @@
+function normalizeRect(rect) {
+  let x = rect.pt1.x
+  let y = rect.pt1.y
+  let width = rect.pt2.x - x
+  let height = rect.pt2.y - y
+  if (width < 0) {
+    x = rect.pt2.x
+    width = -width
+  }
+  if (height < 0) {
+    y = rect.pt2.y
+    height = -height
+  }
+  return { x: x, y: y, width: width, height: height }
+}
+
 class QRectCreator {
   constructor(shapeType) {
     this.shapeType = shapeType

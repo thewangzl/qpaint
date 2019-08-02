@@ -4,7 +4,6 @@ class QPaintView {
     this.controllers = {}
     this._currentKey = ""
     this._current = null
-    this._selection = null
     this.onmousedown = null
     this.onmousemove = null
     this.onmouseup = null
@@ -57,20 +56,6 @@ class QPaintView {
 
   get currentKey() {
     return this._currentKey
-  }
-
-  get selection() {
-    return this._selection
-  }
-
-  set selection(shape) {
-    let old = this._selection
-    if (old != shape) {
-      this._selection = shape
-      if (this.onSelectionChanged != null) {
-        this.onSelectionChanged(old)
-      }
-    }
   }
 
   getMousePos(event) {

@@ -6,29 +6,20 @@ function installControllers() {
     <input type="button" id="RectCreator" value="Create Rect" style="visibility:hidden">
     <input type="button" id="EllipseCreator" value="Create Ellipse" style="visibility:hidden">
     <input type="button" id="CircleCreator" value="Create Circle" style="visibility:hidden">
-    <input type="button" id="ShapeSelector" value="Select Shape" style="visibility:hidden">
     `
 
   for (let gkey in qview.controllers) {
-    if (gkey == "ShapeSelector") {
-      continue
-    }
     let key = gkey
     let elem = document.getElementById(key)
     elem.style.visibility = "visible"
     elem.onclick = function() {
-      if (qview.currentKey != "ShapeSelector") {
+      if (qview.currentKey != "") {
         document.getElementById(qview.currentKey).removeAttribute("style")
       }
       elem.style.borderColor = "blue"
       elem.blur()
       qview.invokeController(key)
     }
-  }
-  qview.invokeController("ShapeSelector")
-  qview.onControllerReset = function() {
-    document.getElementById(qview.currentKey).removeAttribute("style")
-    qview.invokeController("ShapeSelector")
   }
 }
 
