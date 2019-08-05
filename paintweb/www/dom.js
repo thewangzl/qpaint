@@ -56,6 +56,34 @@ function deleteItem(array, item) {
   }
 }
 
+//
+
+class QSerializer {
+  constructor() {
+    this.creators = {}
+  }
+
+  register(name, creator) {
+    this.creators[name] = creator
+  }
+
+  create(json) {
+    for (let key in json) {
+      if (key != "id") {
+        let creator = this.creators[key]
+        if (creator) {
+          return creator[json]
+        }
+        break
+      }
+    }
+    alert("unsupport shape: " + JSON.stringify(json))
+    return null
+  }
+}
+
+var qshapes = new QSerializer()
+
 // ------------------------------------
 
 function _getNextID(key) {
@@ -122,21 +150,7 @@ function loadShape(parent, id) {
   if (o == null) {
     return null
   }
-  let sty = o.style
-  let style = new QShapeStyle(sty.lineWidth, sty.lineColor, sty.fillColor)
-  switch (o.type) {
-    case "QLine":
-      return new QLine(o.pt1, o.pt2, style)
-    case "QRect":
-      return new QRect(o, style)
-    case "QEllipse":
-      return new QEllipse(o.x, o.y, o.radiusX, o.radiusY, style)
-    case "QPath":
-      return new QPath(o.points, o.close, style)
-    default:
-      alert("loadShape: unknown shape type - " + o.type)
-      return null
-  }
+  return qshapes.create(o)
 }
 
 function shapeChanged(shape) {
@@ -166,12 +180,26 @@ class QShapeStyle {
   }
 }
 
+function newShapeStyle(sty) {
+  return new QShapeStyle(sty.lineWidth, sty.lineColor, sty.fillColor)
+}
+
 class QLine {
   constructor(point1, point2, style) {
-    this.pt1 = point1
-    this.pt2 = point2
-    this.style = style
-    this.id = ""
+    if (style) {
+      this.pt1 = point1
+      this.pt2 = point2
+      this.style = style
+      this.ver = 0
+      this.id = ""
+    } else {
+      let o = point1.line
+      this.id = point1.id
+      this.pt1 = o.pt1
+      this.pt2 = o.pt2
+      this.style = newShapeStyle(o.style)
+      this.ver = o.ver
+    }
   }
 
   bound() {
@@ -209,14 +237,30 @@ class QLine {
   }
 }
 
+qshapes.register("line", function(json) {
+  return new QLine(json)
+})
+
 class QRect {
   constructor(r, style) {
-    this.x = r.x
-    this.y = r.y
-    this.width = r.width
-    this.height = r.height
-    this.style = style
-    this.id = ""
+    if (style) {
+      this.x = r.x
+      this.y = r.y
+      this.width = r.width
+      this.height = r.height
+      this.style = style
+      this.ver = 0
+      this.id = ""
+    } else {
+      let o = r.rect
+      this.id = r.id
+      this.x = o.x
+      this.y = o.y
+      this.width = o.width
+      this.height = o.height
+      this.style = newShapeStyle(o.style)
+      this.ver = o.ver
+    }
   }
 
   bound() {
@@ -263,14 +307,30 @@ class QRect {
   }
 }
 
+qshapes.register("rect", function(json) {
+  return new QRect(json)
+})
+
 class QEllipse {
   constructor(x, y, radiusX, radiusY, style) {
-    this.x = x
-    this.y = y
-    this.radiusX = radiusX
-    this.radiusY = radiusY
-    this.style = style
-    this.id = ""
+    if (style) {
+      this.x = x
+      this.y = y
+      this.radiusX = radiusX
+      this.radiusY = radiusY
+      this.style = style
+      this.ver = 0
+      this.id = ""
+    } else {
+      let o = x.ellipse
+      this.id = x.id
+      this.x = o.x
+      this.y = o.y
+      this.radiusX = o.radiusX
+      this.radiusY = o.radiusY
+      this.style = newShapeStyle(o.shape)
+      this.ver = o.ver
+    }
   }
 
   bound() {
@@ -321,12 +381,25 @@ class QEllipse {
   }
 }
 
+qshapes.register("ellipse", function(json) {
+  return new QEllipse(json)
+})
+
 class QPath {
   constructor(points, close, style) {
-    this.points = points
-    this.clone = close
-    this.style = style
-    this.id = ""
+    if (style) {
+      this.points = points
+      this.clone = close
+      this.style = style
+      this.id = ""
+    } else {
+      let o = points.path
+      this.id = points.id
+      this.points = o.points
+      this.close = o.close
+      this.style = newShapeStyle(o.style)
+      this.ver = o.ver
+    }
   }
 
   bound() {
@@ -411,6 +484,10 @@ class QPath {
     ctx.stroke()
   }
 }
+
+qshapes.register("path", function(json) {
+  return new QPath(json)
+})
 
 class QPaintDoc {
   constructor() {
