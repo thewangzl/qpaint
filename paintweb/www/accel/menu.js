@@ -34,7 +34,7 @@ function installControllers() {
 
 function selection_setProp(key, val) {
   if (qview.selection != null) {
-    qview.selection.setProp(key, val)
+    qview.selection.setProp(qview.doc, key, val)
     invalidate(null)
   }
 }
@@ -49,8 +49,8 @@ function onPropChanged(key) {
 
 function onIntPropChanged(key) {
   let elem = document.getElementById(key)
-  let val = elem.value
   elem.blur()
+  let val = parseInt(elem.value)
   if (val > 0) {
     qview.style[key] = val
     selection_setProp(key, val)

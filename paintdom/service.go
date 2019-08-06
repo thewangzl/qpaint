@@ -1,7 +1,9 @@
 package paintdom
 
 import (
+	"bytes"
 	"encoding/json"
+	"io"
 	"log"
 	"net/http"
 	"strconv"
@@ -23,12 +25,39 @@ func NewService(doc *Document) (p *Service) {
 		"POST/drawings":             p.PostDrawings,
 		"GET/drawings/*":            p.GetDrawing,
 		"DELETE/drawings/*":         p.DeleteDrawing,
+		"POST/drawings/*/sync":      p.PostDrawingSync,
 		"POST/drawings/*/shapes":    p.PostShapes,
 		"GET/drawings/*/shapes/*":   p.GetShape,
 		"POST/drawings/*/shapes/*":  p.PostShape,
 		"DELETE/drawing/*/shapes/*": p.DeleteShape,
 	}
 	return
+}
+
+func (p *Service) PostDrawingSync(w http.ResponseWriter, req *http.Request, args []string) {
+	b := bytes.NewBuffer(nil)
+	io.Copy(b, req.Body)
+	log.Println(req.Method, req.URL, b.String())
+
+	var ds serviceDrawingSync
+	err := json.NewDecoder(b).Decode(&ds)
+	if err != nil {
+		ReplyError(w, err)
+		return
+	}
+
+	changes := make([]Shape, len(ds.Changes))
+	for i, item := range ds.Changes {
+		changes[i] = item.Get()
+	}
+
+	id := args[0]
+	err = p.doc.Sync(id, ds.Shapes, changes)
+	if err != nil {
+		ReplyError(w, err)
+		return
+	}
+	ReplyCode(w, 200)
 }
 
 func (p *Service) PostDrawings(w http.ResponseWriter, req *http.Request, args []string) {
@@ -181,6 +210,11 @@ func (p *serviceShape) Get() Shape {
 type serviceShapeOrZorder struct {
 	serviceShape
 	Zorder string
+}
+
+type serviceDrawingSync struct {
+	Changes []serviceShape `json:"changes"`
+	Shapes  []ShapeID      `json:"shapes"`
 }
 
 //

@@ -1,6 +1,7 @@
 package paintdom
 
 import (
+	"log"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -46,6 +47,8 @@ func (p *shapeOnDrawing) moveBack() {
 }
 
 func (p *shapeOnDrawing) delete() {
+	log.Println(p)
+	log.Println(p.front)
 	p.front.back = p.back
 	p.back.front = p.front
 	p.back, p.front = nil, nil
@@ -66,7 +69,38 @@ func newDrawing(id string) *Drawing {
 		ID:     id,
 		shapes: make(map[ShapeID]*shapeOnDrawing),
 	}
+	p.list.init()
 	return p
+}
+
+func (p *Drawing) Sync(shapes []ShapeID, changes []Shape) (err error) {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+	dgshapes := make([]*shapeOnDrawing, len(shapes))
+	for i, id := range shapes {
+		if dgshape, ok := p.shapes[id]; ok {
+			dgshape.delete()
+			dgshapes[i] = dgshape
+		} else {
+			dgshape := new(shapeOnDrawing)
+			dgshapes[i] = dgshape
+			p.shapes[id] = dgshape
+		}
+	}
+	head := &p.list
+	for item := head.front; item != head; item = item.front {
+		delete(p.shapes, item.data.GetID())
+	}
+	head.init()
+	for _, dgshape := range dgshapes {
+		head.insertBack(dgshape)
+	}
+	for _, change := range changes {
+		id := change.GetID()
+		p.shapes[id].data = change
+	}
+
+	return
 }
 
 func (p *Drawing) Add(shape Shape) (err error) {
@@ -88,6 +122,7 @@ func (p *Drawing) List() (shapes []Shape, err error) {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 	n := len(p.shapes)
+	shapes = make([]Shape, n)
 	item := p.list.front
 	for i := 0; i < n; i++ {
 		shapes[i] = item.data
@@ -192,6 +227,14 @@ func (p *Document) Delete(id string) (err error) {
 	defer p.mutex.Unlock()
 	delete(p.data, id)
 	return
+}
+
+func (p *Document) Sync(id string, shapes []ShapeID, changes []Shape) (err error) {
+	drawing, ok := p.data[id]
+	if !ok {
+		return syscall.ENOENT
+	}
+	return drawing.Sync(shapes, changes)
 }
 
 //

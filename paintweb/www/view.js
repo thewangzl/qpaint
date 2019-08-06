@@ -58,8 +58,10 @@ class QPaintView {
 
     this.drawing = drawing
     this.doc = new QPaintDoc()
+    this.doc.onload = function() {
+      view.invalidateRect(null)
+    }
     this.doc.init()
-    this.invalidateRect(null)
   }
 
   get currentKey() {
