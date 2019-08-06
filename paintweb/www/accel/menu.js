@@ -74,34 +74,14 @@ function installPropSelectors() {
     "afterend",
     `<br><div id="properties">
       <label for="lineWidth">LineWidth:</label>
-      <select id="lineWidth" onchange="onIntPropChanged('lineWidth')">
-      <option value='1'>1</option>
-      <option value='3'>3</option>
-      <option value='5'>5</option>
-      <option value='7'>7</option>
-      <option value='9'>9</option>
-      <option value='11'>11</option>
-      </select>&nbsp;
+      <div type="BaseLineWidthPicker" id="lineWidth" onchange="onIntPropChanged('lineWidth')">
+      </div>&nbsp;
       <label for="lineColor">LineColor:</label>
-      <select id="lineColor" onchange="onPropChanged('lineColor')">
-        <option value="black">black</option>
-        <option value="red">red</option>
-        <option value="blue">blue</option>
-        <option value="green">green</option>
-        <option value="yellow">yellow</option>
-        <option value="grey">grey</option>
-      </select>
+      <div type="BaseColorPicker" id="lineColor" onchange="onPropChanged('lineColor')" palette="black,red,blue,green,yellow,gray">
+      </div>
       <label for="fillColor">FillColor:</label>
-      <select id="fillColor" onchange="onPropChanged('fillColor')">
-        <option value="white">white</option>
-        <option value="transparent">transparent</option>
-        <option value="black">black</option>
-        <option value="red">red</option>
-        <option value="blue">blue</option>
-        <option value="green">green</option>
-        <option value="yellow">yellow</option>
-        <option value="grey">grey</option>
-      </select>
+      <div type="BaseColorPicker" id="fillColor" onchange="onPropChanged('fillColor')" palette="white,null(transparent),black,red,blue,green,yellow,gray">
+      </div>
       </div>`
   )
 }
