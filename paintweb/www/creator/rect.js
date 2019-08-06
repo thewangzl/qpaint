@@ -1,43 +1,46 @@
 class QRectCreator {
-  constructor(shapeType) {
+  constructor(view, shapeType) {
     this.shapeType = shapeType
     this.rect = {
       pt1: { x: 0, y: 0 },
       pt2: { x: 0, y: 0 }
     }
     this.started = false
+    this.view = view
     let ctrl = this
-    qview.onmousedown = function(event) {
+    view.onmousedown = function(event) {
       ctrl.onmousedown(event)
     }
-    qview.onmousemove = function(event) {
+    view.onmousemove = function(event) {
       ctrl.onmousemove(event)
     }
-    qview.onmouseup = function(event) {
+    view.onmouseup = function(event) {
       ctrl.onmouseup(event)
     }
-    qview.onkeydown = function(event) {
+    view.onkeydown = function(event) {
       ctrl.onkeydown(event)
     }
   }
 
   stop() {
-    qview.onmousedown = null
-    qview.onmousemove = null
-    qview.onmouseup = null
-    qview.onkeydown = null
+    let view = this.view
+    view.onmousedown = null
+    view.onmousemove = null
+    view.onmouseup = null
+    view.onkeydown = null
   }
 
   reset() {
     this.started = false
-    invalidate(this.rect)
-    qview.fireControllerReset()
+    let view = this.view
+    view.invalidateRect(this.rect)
+    view.fireControllerReset()
   }
 
   buildShape() {
     let rect = this.rect
     let r = normalizeRect(rect)
-    let style = qview.style.clone()
+    let style = defaultStyle.clone()
     switch (this.shapeType) {
       case "line":
         return new QLine(rect.pt1, rect.pt2, style)
@@ -57,21 +60,23 @@ class QRectCreator {
   }
 
   onmousedown(event) {
-    this.rect.pt1 = qview.getMousePos(event)
+    this.rect.pt1 = this.view.getMousePos(event)
     this.started = true
   }
 
   onmousemove(event) {
     if (this.started) {
-      this.rect.pt2 = qview.getMousePos(event)
-      invalidate(this.rect)
+      let view = this.view
+      this.rect.pt2 = view.getMousePos(event)
+      view.invalidateRect(this.rect)
     }
   }
 
   onmouseup(event) {
     if (this.started) {
-      this.rect.pt2 = qview.getMousePos(event)
-      qview.doc.addShape(this.buildShape())
+      let view = this.view
+      this.rect.pt2 = view.getMousePos(event)
+      view.doc.addShape(this.buildShape())
       this.reset()
     }
   }
@@ -89,17 +94,19 @@ class QRectCreator {
   }
 }
 
-qview.registerController("LineCreator", function() {
-  return new QRectCreator("line")
-})
+onViewAdded(function(view) {
+  view.registerController("LineCreator", function() {
+    return new QRectCreator(view, "line")
+  })
 
-qview.registerController("RectCreator", function() {
-  return new QRectCreator("rect")
-})
+  view.registerController("RectCreator", function() {
+    return new QRectCreator(view, "rect")
+  })
 
-qview.registerController("EllipseCreator", function() {
-  return new QRectCreator("ellipse")
-})
-qview.registerController("CircleCreator", function() {
-  return new QRectCreator("circle")
+  view.registerController("EllipseCreator", function() {
+    return new QRectCreator(view, "ellipse")
+  })
+  view.registerController("CircleCreator", function() {
+    return new QRectCreator(view, "circle")
+  })
 })

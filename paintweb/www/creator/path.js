@@ -1,36 +1,39 @@
 class QPathCreator {
-  constructor(close) {
+  constructor(view, close) {
     this.points = []
     this.close = close
     this.fromPos = this.toPos = { x: 0, y: 0 }
     this.started = false
+    this.view = view
     let ctrl = this
-    qview.onmousedown = function(event) {
+    view.onmousedown = function(event) {
       ctrl.onmousedown(event)
     }
-    qview.onmousemove = function(event) {
+    view.onmousemove = function(event) {
       ctrl.onmousemove(event)
     }
-    qview.ondblclick = function(event) {
+    view.ondblclick = function(event) {
       ctrl.ondblclick(event)
     }
-    qview.onkeydown = function(event) {
+    view.onkeydown = function(event) {
       ctrl.onkeydown(event)
     }
   }
 
   stop() {
-    qview.onmousedown = null
-    qview.onmousemove = null
-    qview.ondblclick = null
-    qview.onkeydown = null
+    let view = this.view
+    view.onmousedown = null
+    view.onmousemove = null
+    view.ondblclick = null
+    view.onkeydown = null
   }
 
   reset() {
     this.points = []
     this.started = false
-    invalidate(null)
-    qview.fireControllerReset()
+    let view = this.view
+    view.invalidateRect(null)
+    view.fireControllerReset()
   }
 
   buildShape() {
@@ -38,11 +41,12 @@ class QPathCreator {
     for (let i in this.points) {
       points.push(this.points[i])
     }
-    return new QPath(points, this.close, qview.style.clone())
+    return new QPath(points, this.close, defaultStyle.clone())
   }
 
   onmousedown(event) {
-    this.toPos = qview.getMousePos(event)
+    let view = this.view
+    this.toPos = view.getMousePos(event)
     if (this.started) {
       this.points.push(this.toPos)
     } else {
@@ -53,14 +57,15 @@ class QPathCreator {
 
   onmousemove(event) {
     if (this.started) {
-      this.toPos = qview.getMousePos(event)
+      let view = this.view
+      this.toPos = view.getMousePos(event)
       invalidate(null)
     }
   }
 
   ondblclick(event) {
     if (this.started) {
-      qview.doc.addShape(this.buildShape())
+      this.view.doc.addShape(this.buildShape())
       this.reset()
     }
   }
@@ -78,7 +83,7 @@ class QPathCreator {
 
   onpaint(ctx) {
     if (this.started) {
-      let props = qview.style
+      let props = defaultStyle
       ctx.lineWidth = props.lineWidth
       ctx.strokeStyle = props.lineColor
       ctx.beginPath()
@@ -95,6 +100,8 @@ class QPathCreator {
   }
 }
 
-qview.registerController("PathCreator", function() {
-  return new QPathCreator(false)
+onViewAdded(function(view) {
+  view.registerController("PathCreator", function() {
+    return new QPathCreator(view, false)
+  })
 })

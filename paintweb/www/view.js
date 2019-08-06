@@ -1,6 +1,34 @@
+// ------------------
+
+var qview = null
+
+function setCurrentView(view) {
+  let old = qview
+  qview = view
+  //for(let i in _on)
+}
+
+function invalidate(reserved) {
+  qview.invalidateRect(null)
+}
+
+//------------
+var _onViewAddeds = []
+
+function onViewAdded(handle) {
+  _onViewAddeds.push(handle)
+}
+
+function fireViewAdded(view) {
+  for (let i in _onViewAddeds) {
+    let handle = _onViewAddeds[i]
+    handle(view)
+  }
+}
+
+//-------------------------
 class QPaintView {
-  constructor() {
-    this.style = new QShapeStyle(1, "black", "white")
+  constructor(drawingID) {
     this.controllers = {}
     this._currentKey = ""
     this._current = null
@@ -12,7 +40,7 @@ class QPaintView {
     this.onkeydown = null
     this.onSelectionChanged = null
     this.onControllerReset = null
-    let drawing = document.getElementById("drawing")
+    let drawing = document.getElementById(drawingID)
     let view = this
     drawing.onmousedown = function(event) {
       event.preventDefault()
@@ -37,6 +65,10 @@ class QPaintView {
       if (view.ondblclick != null) {
         view.ondblclick(event)
       }
+    }
+
+    drawing.onmouseenter = function(event) {
+      setCurrentView(view)
     }
 
     document.onkeydown = function(event) {
@@ -136,10 +168,4 @@ class QPaintView {
     this._current = ctrl
     this._currentKey = name
   }
-}
-
-var qview = new QPaintView()
-
-function invalidate(reserved) {
-  qview.invalidateRect(null)
 }
