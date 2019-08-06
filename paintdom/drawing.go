@@ -1,7 +1,6 @@
 package paintdom
 
 import (
-	"log"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -47,8 +46,6 @@ func (p *shapeOnDrawing) moveBack() {
 }
 
 func (p *shapeOnDrawing) delete() {
-	log.Println(p)
-	log.Println(p.front)
 	p.front.back = p.back
 	p.back.front = p.front
 	p.back, p.front = nil, nil
